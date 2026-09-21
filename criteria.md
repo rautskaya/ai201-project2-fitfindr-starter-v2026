@@ -25,9 +25,8 @@ Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
 
 **Why this target:**
-<!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
-     "my search is a plain keyword match and some phrasings will miss" is a
-     real answer. -->
+
+`search_listings` matches by keyword overlap, not meaning — it scores zero if a query's words don't appear in the listing's title, description, or tags. Listing sizes also come in inconsistent formats ("W30 L30", "S/M", "XL (oversized)"), so a size filter can miss a real match too. Both are realistic ways one phrasing in five fails, so 4 of 5 fits a keyword-only search.
 
 ---
 
@@ -37,67 +36,36 @@ Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
-<!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
-     about this path? -->
+
+Criterion 1 depends on search quality, which is fuzzy and can miss. This one only depends on a plain `if not results: stop` check in the code — no wording, no matching, just a yes/no branch. That should hold every time.
 
 ---
 
-## 3. Something about state
+## 3. The selected item matches what reaches suggest_outfit
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know that the item your search found is the same item the
-     next tool received? Name something countable or observable.
-
-     This is the criterion people find hardest, because state failure doesn't
-     look like state failure — it looks like a tool problem. Something that
-     compares session["selected_item"] against what actually reached
-     suggest_outfit is the shape you're after. -->
-
-
+The item's name in `session["selected_item"]` appears in the outfit suggestion text, in at least 4 of 5 tries.
 
 **Why this target:**
 
-
-
+Passing the item into `suggest_outfit`should never fail. But checking it this way relies on the model choosing to name the item in its answer — it might describe an item without repeating its exact name. 
 ---
 
-## 4. Something about the fit card
+## 4. The fit card always mentions the price
 
-<!-- YOU WRITE THIS ONE.
-
-     The fit card calls a model, so the same input can produce different words
-     each time. That's not a bug — it's the nature of the tool. So what would
-     make it acceptable?
-
-     Think about what you'd actually be unhappy to see. A caption that never
-     mentions the price? Two different items producing the same opening
-     sentence? A card longer than a caption anyone would post? Any of those can
-     be turned into a number. -->
-
-
+The fit card includes the item's price, in at at least 4 of 5 tries.
 
 **Why this target:**
 
-
-
+`create_fit_card`'s own spec says it should mention the price once.
 ---
 
-## 5. Your choice
+## 5. A new customer with no wardrobe still gets useful advice
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. Speed, the empty
-     wardrobe path, what happens when the model can't be reached, whether the
-     search respects a price ceiling — anything, as long as it names a number
-     or an observable outcome. -->
-
-
+For a user with an empty wardrobe, `suggest_outfit` still returns real, usable styling advice for the new item in 5 of 5 tries.
 
 **Why this target:**
 
-
-
+Everyone starts as a new customer with nothing in their wardrobe entered yet. The agent should not only work well for users with an established wardrobe.
 ---
 
 <!-- ─────────────────────────────────────────────────────────────────────────
