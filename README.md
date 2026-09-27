@@ -20,27 +20,11 @@
 
 ---
 
-<!-- ─────────────────────────────────────────────────────────────────────────
-     HOW TO USE THIS FILE
-
-     This is your submission. Fill each section in as you finish the milestone
-     it belongs to — don't leave it all to the end.
-
-     Unit 3 asks for the first five sections. Unit 4 adds the five below them.
-     Leave the unit 4 sections alone until then; they're here so you know
-     what's coming.
-
-     Everything is pasted as TEXT. No screenshots, no images, no video links.
-     A typed block of output gets full credit; a picture of the same output
-     gets none.
-     ───────────────────────────────────────────────────────────────────────── -->
-
 <!-- ═══════════════════════ UNIT 3 — THE BUILD ═══════════════════════ -->
 
 ## What This Does
 
-<!-- Three or four sentences: what a user asks for, and what they get back. -->
-
+A user describes a thrifted item they want, in plain language — a description, and optionally a size and a price ceiling (e.g. "vintage graphic tee under $30, size M"). The agent searches a mock secondhand marketplace, picks the best match, and suggests an outfit pairing it with pieces from the user's own wardrobe (or general styling advice if they haven't entered a wardrobe yet). It finishes by writing a short, postable caption about the find — naming the item, its price, and the platform it's on. If nothing matches the search, it says so and suggests what to change, instead of guessing.
 
 
 ---
@@ -83,11 +67,6 @@
 ---
 
 ## Sample Run
-
-<!-- Two things go here.
-
-     1. One FULL query and its output, pasted as text.
-     2. Your three per-tool terminal tests — the command and what it printed. -->
 
 **One full query**
 
@@ -157,24 +136,17 @@ Finally found the holy grail of 90s slouch and scored these vintage Levi's 501 j
 
 ## How I Used AI
 
-<!-- Two specific moments. What you asked, what came back, what you changed.
-
-     "I used Claude to help me code" is not enough.
-
-     "I gave Claude my search_listings spec. It returned None on no match
-     instead of an empty list, so I changed it" is the level we want. -->
-
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Claude to implement `search_listings`'s size filter, having read the docstring's warning that a plain substring test lets "S" match "US 9" and "L" match "XL".
+- *What came back:* A whole-token matcher — `_size_tokens` splits a size string on whitespace/slashes/parens ("XL (oversized)" → `["xl", "oversized"]`), and `_size_matches` checks for an exact token match instead of a substring anywhere in the string.
+- *What I changed:* Nothing — I tested it against the exact cases the docstring called out (`"S"` vs `"US 9"`, `"L"` vs `"XL"`) and it correctly returned `False` for both.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Claude to review my finished `run_agent()`.
+- *What came back:* It pointed out that `trace.check_iterations(iterations)` is called with `iterations` hardcoded to 1. My loop never actually repeats — it just runs through the three tools once — so this check can never trigger. It looks like a safety guard, but right now it isn't guarding anything.
+- *What I changed:* Nothing yet, but it gave me a real idea: if search finds nothing, instead of just giving up, the agent could loosen the search (drop the price limit, or the size) and try again. That would turn this into an actual loop, and then the iteration check would start doing real work.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
