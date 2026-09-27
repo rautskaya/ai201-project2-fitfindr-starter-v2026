@@ -76,9 +76,9 @@
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regex, in `agent.py::_parse_query` — not the model. It pulls a max price from an `"under $N"` pattern and a size from a `"size X"` pattern, then uses whatever text is left as the description. Chosen for the same reason `search_listings` doesn't call the model: parsing "under $30, size M" is mechanical and doesn't need an API call.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** `parsed` (from the query) → `search_results` (from `search_listings`) → `selected_item` (first of `search_results`) → `outfit_suggestion` (from `suggest_outfit`, reading `selected_item` and `wardrobe` back out of the session) → `fit_card` (from `create_fit_card`, reading `outfit_suggestion` and `selected_item` back out of the session). If `search_results` is empty, `error` is set instead and everything after it stays `None`.
 
 ---
 
@@ -92,8 +92,28 @@
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
 
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   Here are two specific outfits you can create using the Y2K butterfly baby tee and pieces from your existing wardrobe:
+
+**Outfit 1: Casual Y2K Streetwear**
+*   **Top:** Y2K Butterfly Baby Tee
+*   **Bottoms:** Baggy straight-leg jeans (dark wash)
+*   **Outerwear:** Black cropped zip hoodie (worn unzipped or casually draped)
+*   **Shoes:** Chunky white sneakers
+*   **Accessories:** Black crossbody bag
+*   *Why it works:* The fitted, cropped silhouette of the baby tee balances out the volume of the baggy dark-wash jeans, leaning fully into the 2000s aesthetic. Throwing on the black cropped zip hoodie and chunky white sneakers keeps the vibe effortless and tied together.
+
+**Outfit 2: Contrast Casual (Prep meets Y2K)**
+*   **Top:** Y2K Butterfly Baby Tee
+*   **Bottoms:** Wide-leg khaki trousers
+*   **Accessories:** Brown leather belt + Black crossbody bag
+*   **Shoes:** Black combat boots
+*   *Why it works:* This pairs the ultra-feminine, pastel butterfly print of the baby tee with the structured, utilitarian look of the wide-leg khaki trousers. Tucking in the baby tee and wearing the brown leather belt adds definition at the waist, while the black combat boots add a bit of edge to ground the outfit.
+
+  Fit card: Still pinching myself over scoring this dreamy butterfly baby tee on Depop for just $18! It's giving ultimate 2000s mall-rat energy, and I'm already planning to style it with baggy low-rise denim and chunky sneakers for that effortless Y2K streetwear vibe. ✨🦋
 ```
 
 **The three tools, tested one at a time**

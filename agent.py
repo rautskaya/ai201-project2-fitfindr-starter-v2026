@@ -13,6 +13,8 @@ Build and test your three tools in `tools.py` first. Then come here.
     python agent.py          runs both example paths below
 """
 
+import re
+
 import config
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
@@ -47,6 +49,37 @@ def new_session(query: str, wardrobe: dict) -> dict:
     }
 
 
+# ── query parsing ─────────────────────────────────────────────────────────────
+
+def _parse_query(query: str) -> dict:
+    """
+    Pull a description, a size, and a max_price out of a plain-language query.
+
+    Regex, not the model — search_listings is already the tool that doesn't
+    call the model, and there's no reason for parsing to spend an API call on
+    something this mechanical.
+
+    "vintage graphic tee under $30, size M" ->
+        {"description": "vintage graphic tee", "size": "M", "max_price": 30.0}
+    """
+    text = query.strip()
+
+    max_price = None
+    price_match = re.search(r"under\s*\$?(\d+(?:\.\d+)?)", text, re.I)
+    if price_match:
+        max_price = float(price_match.group(1))
+        text = text[: price_match.start()] + text[price_match.end():]
+
+    size = None
+    size_match = re.search(r"\bsize\s+([a-z0-9./]+)", text, re.I)
+    if size_match:
+        size = size_match.group(1)
+        text = text[: size_match.start()] + text[size_match.end():]
+
+    description = re.sub(r"\s+", " ", text).strip(" ,.")
+    return {"description": description, "size": size, "max_price": max_price}
+
+
 # ── planning loop ─────────────────────────────────────────────────────────────
 
 def run_agent(query: str, wardrobe: dict) -> dict:
@@ -64,39 +97,6 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         the run ended early and the later fields will still be None.
 
     ─────────────────────────────────────────────────────────────────────────
-    TODO — build this, following the branch rule you wrote in Milestone 2.
-
-      1. Start a session with new_session().
-
-      2. Count the times round the loop, and call trace.check_iterations(count)
-         on each one before you go again. It raises when the count passes
-         MAX_ITERATIONS in config.py — see trace.py.
-
-      3. Parse the query into a description, a size, and a max_price. Regex,
-         string splitting, or asking the model are all fine — say which you
-         chose in your README. Put the result in session["parsed"].
-
-      4. Call search_listings() with what you parsed.
-         Put the results in session["search_results"].
-
-         ⚠️ THIS IS THE BRANCH. If nothing came back:
-              - put a message in session["error"] saying what the user could
-                change — "No results" is not that message
-              - return the session
-              - do NOT call suggest_outfit with nothing
-
-      5. Choose an item — the first result is fine. Put it in
-         session["selected_item"].
-
-      6. Call suggest_outfit() with the selected item and the wardrobe.
-         Put the result in session["outfit_suggestion"].
-
-      7. Call create_fit_card() with the outfit and the item.
-         Put the result in session["fit_card"].
-
-      8. Return the session.
-
-    ─────────────────────────────────────────────────────────────────────────
     IN UNIT 4 you come back and add two things:
 
       • Trace calls. One per step. `trace.step("search_listings", inputs=...,
@@ -107,8 +107,35 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     """
     session = new_session(query, wardrobe)
 
-    # TODO: delete these two lines and build the loop.
-    session["error"] = "The planning loop isn't built yet — see the TODO in agent.py."
+    iterations = 1
+    trace.check_iterations(iterations)
+
+    session["parsed"] = _parse_query(query)
+
+    session["search_results"] = search_listings(
+        session["parsed"]["description"],
+        size=session["parsed"]["size"],
+        max_price=session["parsed"]["max_price"],
+    )
+
+    # THE BRANCH: nothing to build an outfit around, so stop here.
+    if not session["search_results"]:
+        session["error"] = (
+            "No listings matched that search. Try a broader description, "
+            "a higher price, or a different size."
+        )
+        return session
+
+    session["selected_item"] = session["search_results"][0]
+
+    session["outfit_suggestion"] = suggest_outfit(
+        session["selected_item"], session["wardrobe"]
+    )
+
+    session["fit_card"] = create_fit_card(
+        session["outfit_suggestion"], session["selected_item"]
+    )
+
     return session
 
 
