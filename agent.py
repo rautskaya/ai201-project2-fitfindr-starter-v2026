@@ -112,12 +112,18 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     trace.check_iterations(iterations)
 
     session["parsed"] = _parse_query(query)
+    trace.step("parse_query", inputs=query, returned=session["parsed"])
 
     session["search_results"] = call_tool("search_listings", {
         "description": session["parsed"]["description"],
         "size": session["parsed"]["size"],
         "max_price": session["parsed"]["max_price"],
     })
+    trace.step(
+        "search_listings (via MCP)",
+        inputs=session["parsed"],
+        returned=session["search_results"],
+    )
 
     # THE BRANCH: nothing to build an outfit around, so stop here.
     if not session["search_results"]:
@@ -125,16 +131,28 @@ def run_agent(query: str, wardrobe: dict) -> dict:
             "No listings matched that search. Try a broader description, "
             "a higher price, or a different size."
         )
+        trace.step("branch", note="empty search_results — stopping before suggest_outfit")
         return session
 
     session["selected_item"] = session["search_results"][0]
+    trace.step("branch", note="search_results non-empty — continuing to suggest_outfit")
 
     session["outfit_suggestion"] = suggest_outfit(
         session["selected_item"], session["wardrobe"]
     )
+    trace.step(
+        "suggest_outfit",
+        inputs={"new_item": session["selected_item"], "wardrobe": session["wardrobe"]},
+        returned=session["outfit_suggestion"],
+    )
 
     session["fit_card"] = create_fit_card(
         session["outfit_suggestion"], session["selected_item"]
+    )
+    trace.step(
+        "create_fit_card",
+        inputs={"outfit": session["outfit_suggestion"], "new_item": session["selected_item"]},
+        returned=session["fit_card"],
     )
 
     return session

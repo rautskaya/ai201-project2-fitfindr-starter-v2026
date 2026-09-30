@@ -217,32 +217,45 @@ that produced it:
 
 ## Loop Trace
 
-<!-- One full run, printed step by step, with the MCP call visible in it.
-
-     `python app.py ask '...' --trace` once you've added the trace.step()
-     calls in Milestone 2.
-
-     Worth pasting BOTH the happy path and the empty-search path. The empty
-     one should be visibly shorter, because it stops. If your two traces are
-     the same length, your branch isn't working — and this is the fastest way
-     anyone will ever find that out. -->
-
 **Happy path**
 
 ```
+$ python app.py ask 'vintage graphic tee under $30' --trace
 
+[1] parse_query
+      in:  vintage graphic tee under $30
+      out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+[3] branch
+      →    search_results non-empty — continuing to suggest_outfit
+[4] suggest_outfit
+      in:  dict with keys: new_item, wardrobe
+      out: Here are two specific outfits you can create using the Y2K butterfly baby tee and pieces from your existing wa…
+[5] create_fit_card
+      in:  dict with keys: outfit, new_item
+      out: Still pinching myself over scoring this dreamy butterfly baby tee on Depop for just $18! It's giving ultimate …
 ```
 
 **Empty search**
 
 ```
+$ python app.py ask 'designer ballgown size XXS under $5' --trace
 
+[1] parse_query
+      in:  designer ballgown size XXS under $5
+      out: dict with keys: description, size, max_price
+[2] search_listings (via MCP)
+      in:  dict with keys: description, size, max_price
+      out: [] (empty)
+[3] branch
+      →    empty search_results — stopping before suggest_outfit
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+The empty path stops at step 3 — no `suggest_outfit`, no `create_fit_card` — while the happy path runs all 5 steps. That length difference is the branch actually doing its job.
+
+**On the MCP move:** `search_listings` is called through `mcp_client.call_tool("search_listings", {...})` instead of a direct import — visible as step `[2] search_listings (via MCP)` in both traces above. Nothing behaved differently after the rewire: I compared the direct-call result against the MCP-call result field-by-field (including types — `price` stayed `float`, `brand` stayed `None`) and they were identical. The rewire worked cleanly on the first attempt.
 
 
 
