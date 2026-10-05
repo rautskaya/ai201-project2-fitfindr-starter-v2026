@@ -57,6 +57,10 @@ The fit card includes the item's price, in at at least 4 of 5 tries.
 **Why this target:**
 
 `create_fit_card`'s own spec says it should mention the price once.
+
+> **Revised in unit 4:** 5 of 5 tries.
+>
+> **Why revised:** The original target hedged against the model "forgetting" to mention the price. But the price isn't something the model has to remember or infer — it's inserted directly into the prompt as a fact (`Price: $42`), and the prompt explicitly tells the model to use it. The model is copying a given value, not deciding whether to include one. That's much closer to criterion 2's "plain code, should hold every time" than to criterion 1's "fuzzy keyword search." Real runs back this up: 5 of 5 on both the before and after test, no exceptions. 4 of 5 was hedging against a failure mode the prompt design already makes very unlikely.
 ---
 
 ## 5. A new customer with no wardrobe still gets useful advice

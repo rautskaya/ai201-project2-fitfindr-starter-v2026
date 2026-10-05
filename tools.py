@@ -117,7 +117,9 @@ def search_listings(
     query_words = re.findall(r"[a-z0-9]+", description.lower())
     scored = [(item, _keyword_score(item, query_words)) for item in listings]
     scored = [(item, score) for item, score in scored if score > 0]
-    scored.sort(key=lambda pair: pair[1], reverse=True)
+    # Sort by score first; when two items tie on score, cheaper wins instead
+    # of whichever happened to be listed first in the data file.
+    scored.sort(key=lambda pair: (-pair[1], pair[0]["price"]))
 
     return [item for item, _ in scored[: config.SEARCH_RESULT_LIMIT]]
 

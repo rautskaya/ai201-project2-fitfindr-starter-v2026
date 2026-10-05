@@ -148,6 +148,12 @@ Finally found the holy grail of 90s slouch and scored these vintage Levi's 501 j
 - *What came back:* It pointed out that `trace.check_iterations(iterations)` is called with `iterations` hardcoded to 1. My loop never actually repeats — it just runs through the three tools once — so this check can never trigger. It looks like a safety guard, but right now it isn't guarding anything.
 - *What I changed:* Nothing yet, but it gave me a real idea: if search finds nothing, instead of just giving up, the agent could loosen the search (drop the price limit, or the size) and try again. That would turn this into an actual loop, and then the iteration check would start doing real work.
 
+**Moment 3**
+
+- *What I asked for:* I asked Claude to actually trigger the model-unavailable failure, not just assume it worked.
+- *What came back:* With a bad API key, `run_agent` crashes instead of returning a session. `app.py` happens to catch it with a generic error handler, so no raw traceback shows — but `agent.py` itself never catches `ModelUnavailable`, unlike the other two failures.
+- *What I changed:* Nothing in the code — wrote it up honestly as a gap in "What's Still Broken" instead of assuming the TODO comment meant it was done.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
@@ -212,7 +218,7 @@ This light-wash cropped denim jacket pairs effortlessly with high-waisted bottom
 
 Nothing was missed — all five criteria hit MET. So instead of diagnosing a failure, here's which targets I'd set differently now that I've seen real results.
 
-**Criterion 4 (4 of 5) should be 5 of 5.** I set this low because I thought the model might forget to mention the price. But the price isn't something the model has to remember — it's typed directly into the prompt as a fact (`Price: $42`), and the prompt tells the model to use it. The model isn't deciding whether to include it; it's just copying a number that's already right there. That's why it worked 5 out of 5 times with no exceptions. This target should be as strict as criterion 2's, since it's just as reliable.
+**Criterion 4 (4 of 5) — revised to 5 of 5.** I set this low because I thought the model might forget to mention the price. But the price isn't something the model has to remember — it's typed directly into the prompt as a fact (`Price: $42`), and the prompt tells the model to use it. The model isn't deciding whether to include it; it's just copying a number that's already right there. That's why it worked 5 out of 5 times with no exceptions, on both the before and after runs. This target should be as strict as criterion 2's, since it's just as reliable. See `criteria.md` for the formal revision.
 
 **Criterion 1 (4 of 5) is also a soft spot, in a different way.** It passed 5 of 5, but the query I tested ("vintage graphic tee") shared a lot of words with the actual listing, so it was an easy search. I didn't really test the hard case — a query worded very differently from the listing text. The number might be fine, but the test behind it was too easy to prove that.
 
@@ -266,29 +272,30 @@ The empty path stops at step 3 — no `suggest_outfit`, no `create_fit_card` —
 
 ## The Improvement
 
-<!-- What you changed, why your diagnosis pointed at it, and the after-run in
-     the same table format. One change, measured properly.
+**What I changed:** Two things, both from the diagnosis above.
 
-     `python run_eval.py --label after` -->
+1. **`tools.py::search_listings`** — the sort now breaks ties by price instead of file order: `scored.sort(key=lambda pair: (-pair[1], pair[0]["price"]))`. Before, two equally-relevant items were ordered by whichever happened to be listed first in `listings.json` — not a real decision. Now the cheaper of two equally-good matches wins.
+2. **`criteria.md`, Criterion 4** — target revised from 4 of 5 to 5 of 5. The diagnosis found the original target was hedging against a failure mode (the model "forgetting" the price) that the prompt design already prevents, since the price is handed to the model as a literal fact, not something it has to recall.
 
-**What I changed:**
-
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** Neither was fixing a real miss — both came from the no-misses diagnosis. #1 fixes a real but not-yet-tested problem (confirmed directly on the query "pants," where two items tied and the wrong one won by file order). #2 corrects a target that was looser than the evidence justified.
 
 ### Run Log — After
 
+Produced by `run_eval.py::main`. Same 5 scenarios, 5 tries each, caching off. Full output in `results/run_2026-10-05_1101_after.md`.
+
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Selected item matches what reaches suggest_outfit | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card always mentions the price | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Empty wardrobe still gets useful advice | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
 **Did it help, and how do I know:**
 
-<!-- If it made things worse, say that. Honestly reported, that earns full
-     credit and is more interesting than one that worked. -->
+**Criterion 4 held at its new, stricter target** — 5 of 5 again, same as before, now against the tighter number. The revised target isn't just untested optimism; it's backed by two independent runs (before and after) both hitting 5/5.
+
+**The price tie-break fix is verified, but didn't change any of the 5 scenarios' results** — none of my actual test queries ("corduroy pants under $40," "denim jacket under $50") happened to produce an exact score tie, so `selected_item` came back identical before and after for all 5 scenarios. I confirmed the fix works on a separate, non-scenario query: searching "pants" alone now returns "Low-Rise Cargo Pants" ($27) first instead of "Corduroy Wide-Leg Pants" ($32) — the cheaper of two equally-scoring matches, instead of whichever was listed first in the data file. This is an honest result: the fix is real and correct, but my existing 5 criteria don't happen to exercise it, since none of them use a single-word, highly ambiguous query.
 
 
 
@@ -296,45 +303,13 @@ The empty path stops at step 3 — no `suggest_outfit`, no `create_fit_card` —
 
 ## What's Still Broken
 
-<!-- For each criterion still missed: what you'd do, and why you stopped where
-     you did. "I ran out of time" is fine if it's true. Pretending nothing is
-     left is not. -->
+No criterion is currently missed, but three real gaps are still open:
 
+**1. `ModelUnavailable` crashes `run_agent` instead of handling it.** I triggered this with a bad API key and confirmed it: the function raises instead of returning a normal session with `error` set, unlike the other two failure modes. What I'd do: wrap the two model calls in a `try/except ModelUnavailable`, catch it, and set `session["error"]` the same way the empty-search branch does. I stopped because I found this gap late and wanted to document it honestly rather than rush an untested fix.
 
+**2. The price tie-break fix has no automated test.** I verified it manually on the query "pants," but none of my 5 scenarios actually produce a tie, so nothing in `run_eval.py` would catch it if this broke later. What I'd do: add a 6th scenario to `scenarios.py` using "pants" as a diagnostic (not one of the five numbered criteria). I stopped because I wanted to flag the gap clearly rather than quietly add it without calling it out.
 
-<!-- ═════════════════════════════════════════════════════════════════════
-
-     SUBMISSION CHECKLIST — unit 3
-
-       [ ] criteria.md has five numbered criteria, each with a target
-       [ ] Each criterion has a reason underneath it
-       [ ] All five unit 3 sections above have real content
-       [ ] Tool Inventory: all three tools, inputs WITH TYPES, a specific
-           return value, and the empty case
-       [ ] Planning Loop names the branch rule and agent.py::run_agent
-       [ ] Sample Run: one full query plus the three per-tool tests, as text
-       [ ] At least four new commits
-       [ ] Repository URL submitted — WRITE IT DOWN, you submit the same one
-           next unit
-
-     SUBMISSION CHECKLIST — unit 4
-
-       [ ] mcp_server.py exists with one tool registered
-           (or a written record of exactly where the rewire broke)
-       [ ] Run Log — Before, five criteria, five tries each
-       [ ] Real output pasted underneath, naming file and function
-       [ ] A verdict on every criterion
-       [ ] A diagnosis for every miss, naming a place AND a mechanism
-       [ ] Loop Trace, with the MCP call visible in it
-       [ ] All three failure modes triggered and handled
-       [ ] One improvement, with Run Log — After in the same format
-       [ ] What's Still Broken
-       [ ] At least four new commits
-       [ ] The SAME repository URL as last unit
-
-     Do not delete and recreate this repository. Your commit history is what
-     shows your criteria existed before your results did.
-     ═════════════════════════════════════════════════════════════════════ -->
+**3. Criterion 1 was never tested with a genuinely hard query.** My test query ("vintage graphic tee") shared a lot of words with the real listing, so it never tested the case keyword search actually struggles with — a query worded very differently from the listing text. What I'd do: add a second try using a paraphrased query for the same item, to see if the 4-of-5 target actually holds under real difficulty. I stopped because I ran out of time to pick a good hard example and verify it fairly.
 
 ---
 
