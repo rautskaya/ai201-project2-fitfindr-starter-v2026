@@ -29,24 +29,29 @@ SCENARIOS = [
         "criterion": 2,
     },
     {
-        # A user with nothing saved. One of unit 4's three failure modes.
-        "name": "empty wardrobe",
+        # State check: does the item that reached suggest_outfit match
+        # session["selected_item"]? Any matching query works — what's being
+        # checked is the session, not the wording of the query.
+        "name": "selected item reaches suggest_outfit",
+        "query": "corduroy pants under $40",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Does the fit card mention the item's price? A different item from
+        # scenario 1 so this isn't just re-testing the same search/prompt.
+        "name": "fit card mentions price",
+        "query": "denim jacket under $50",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # A user with nothing saved. Criterion 5.
+        "name": "empty wardrobe gets useful advice",
         "query": "denim jacket under $50",
         "wardrobe": "empty",
-        "criterion": None,
+        "criterion": 5,
     },
-    # TODO: add what your criteria 3, 4 and 5 need.
-    #
-    # Set "criterion" to the number in criteria.md that the scenario tests.
-    # "criterion": None means a diagnostic run — useful to have, but it isn't
-    # one of your five, and run_eval.py marks it as such in the table.
-    #
-    # For a state criterion, any normal query works — what you're checking is
-    # what ends up in the session, not what the user typed.
-    #
-    # For a fit-card criterion, you probably want the SAME query listed more
-    # than once, or several different items, depending on what your criterion
-    # actually says.
 ]
 
 WARDROBES = ("example", "empty")

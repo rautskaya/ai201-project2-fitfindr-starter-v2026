@@ -157,61 +157,64 @@ Finally found the holy grail of 90s slouch and scored these vintage Levi's 501 j
 
 ## Run Log — Before
 
-<!-- Five criteria, five tries each, in this exact format.
-
-     Five, because your criteria are written out of five. Mark each try PASS
-     or FAIL, count the passes, and read that count against your target — a
-     row targeting 4 of 5 with three PASS cells is MISSED (3/5).
-
-     `python run_eval.py --label before` runs everything and writes the table
-     into results/. Paste it here and fill in the verdicts. -->
+Produced by `run_eval.py::main`. Loop: `agent.py::run_agent`. Tools: `tools.py`. 5 tries per scenario, caching off. Full output in `results/run_2026-09-30_1648_before.md`.
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Selected item matches what reaches suggest_outfit | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card always mentions the price | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Empty wardrobe still gets useful advice | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+**Real output from one try**, pasted as text, naming the file and function that produced it:
+
+**Criterion 3** — produced by `tools.py::suggest_outfit`, item was `session["selected_item"]` = "Corduroy Wide-Leg Pants — Rust" ($32.0, depop):
 
 ```
+Here is an outfit that pairs the new rust corduroy pants with items already in the wardrobe:
 
+**The Casual Cool Look**
+*   **Bottoms:** Corduroy Wide-Leg Pants (Rust)
+*   **Top:** White Ribbed Tank Top (tucked in to highlight the high waist)
+*   **Outerwear:** Vintage Black Denim Jacket
+*   **Shoes:** Chunky White Sneakers
+*   **Accessories:** Black Crossbody Bag
+
+**Why it works:** The high-waisted, wide-leg silhouette of the rust cords pairs effortlessly with a fitted white tank, creating a balanced proportion. Throwing on the black denim jacket adds a cool, vintage edge that ties in the black crossbody bag, while the white sneakers tie back to the brightness of the tank top for a cohesive, casual everyday outfit.
+```
+
+**Criterion 4** — produced by `tools.py::create_fit_card`, item was "Denim Jacket — Light Wash, Cropped" ($42.0, poshmark):
+
+```
+Scored this light-wash cropped denim jacket for just $42 on Poshmark and I am obsessed! It has the ultimate 90s off-duty model vibe that looks so good thrown over a chunky sweater or paired with baggy jeans. Can't wait to live in this all spring.
+```
+
+**Criterion 5** — produced by `tools.py::suggest_outfit`, called with an empty wardrobe (`get_empty_wardrobe()`):
+
+```
+This light-wash cropped denim jacket pairs effortlessly with high-waisted bottoms like wide-leg trousers, pleated skirts, or high-rise denim for a balanced silhouette. Because of its structured shoulders and blank canvas, it works wonderfully layered over simple ribbed tank tops, graphic tees, or cozy hoodies. Finish the look with casual footwear like chunky sneakers, loafers, or ankle boots to lean into its versatile, vintage-inspired vibe.
 ```
 
 ---
 
 ## Verdicts and Diagnoses
 
-<!-- MET or MISSED per criterion against LAST UNIT's target, plus a sentence on
-     how you decided.
-
-     Then, for every miss: which of the four places it happened — a tool, the
-     loop's branch, the session, or the model's output — AND the mechanism.
-
-     Not a diagnosis:  "The fit card was bad."
-     A diagnosis:      "The fit card criterion missed on 2 of 5 items. Both had
-                        an empty brand field. My prompt puts the brand in the
-                        first sentence, so the card opened with a blank and read
-                        like a fragment. The tool worked; the prompt assumed a
-                        field that isn't always there."
-
-     Look for a pattern. Three misses on the same tool is one problem, not
-     three. -->
-
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Matching query completes all three tools | 4 of 5 | MET (5/5) | All 5 tries finished with a real fit card and no early stop. I checked each try's "stopped early" line — all said "no." |
+| 2 | Impossible query stops before the second tool | 5 of 5 | MET (5/5) | All 5 tries stopped with an error message, and none reached `suggest_outfit`. I checked that `outfit_suggestion` stayed empty every time. |
+| 3 | Selected item matches what reaches suggest_outfit | 4 of 5 | MET (5/5) | The item was "Corduroy Wide-Leg Pants — Rust." I read all 5 outfit suggestions and the pants were named in every one, sometimes word-for-word, sometimes as "rust corduroy pants." |
+| 4 | Fit card always mentions the price | 4 of 5 | MET (5/5) | The item cost $42. I searched all 5 fit cards for "$42" and found it in every single one. |
+| 5 | Empty wardrobe still gets useful advice | 5 of 5 | MET (5/5) | I ran the same query with an empty wardrobe. All 5 tries gave real, specific styling advice (not an error, not a blank string) — just without naming wardrobe pieces, since there weren't any. |
 
 **Diagnoses**
 
+Nothing was missed — all five criteria hit MET. So instead of diagnosing a failure, here's which targets I'd set differently now that I've seen real results.
 
+**Criterion 4 (4 of 5) should be 5 of 5.** I set this low because I thought the model might forget to mention the price. But the price isn't something the model has to remember — it's typed directly into the prompt as a fact (`Price: $42`), and the prompt tells the model to use it. The model isn't deciding whether to include it; it's just copying a number that's already right there. That's why it worked 5 out of 5 times with no exceptions. This target should be as strict as criterion 2's, since it's just as reliable.
+
+**Criterion 1 (4 of 5) is also a soft spot, in a different way.** It passed 5 of 5, but the query I tested ("vintage graphic tee") shared a lot of words with the actual listing, so it was an easy search. I didn't really test the hard case — a query worded very differently from the listing text. The number might be fine, but the test behind it was too easy to prove that.
 
 ---
 
